@@ -17,8 +17,6 @@ async function getListInfoFromSelection() {
 
       console.log(`Total paragraphs in the selection: ${paragraphs.items.length}`);
 
-      let currentList = [];
-      let currentLevel = -1;
       let clipboardData = [];
       let parentNumbering = [];
 
@@ -27,9 +25,11 @@ async function getListInfoFromSelection() {
         paragraph.load("text,style,isListItem");
         await context.sync();
 
-        const style = paragraph.style;
-        const text = paragraph.text.trim();
+        let text = paragraph.text.trim();
         const isListItem = paragraph.isListItem;
+
+        // Remove special non-printable/control characters from text
+        text = text.replace(/[^\x20-\x7E]/g, "");
 
         if (isListItem) {
           paragraph.listItem.load("level,listString");
@@ -38,37 +38,23 @@ async function getListInfoFromSelection() {
           const level = paragraph.listItem.level;
           const listString = paragraph.listItem.listString || "";
 
-          if (level <= currentLevel && currentList.length > 0) {
-            clipboardData.push(currentList.join("\n"));
-            currentList = [];
-          }
-
+          // Update parentNumbering for the current level
           if (level <= parentNumbering.length) {
             parentNumbering = parentNumbering.slice(0, level);
           }
-
           parentNumbering[level] = listString;
 
           const fullNumbering = parentNumbering.slice(0, level + 1).join(".");
-          const indent = "  ".repeat(level);
-          const formattedItem = `${fullNumbering} ${text}`;
-          currentList.push(`${indent}${formattedItem}`);
-          currentLevel = level;
+
+          // Format as key-value pair
+          clipboardData.push(`"${fullNumbering}": "${text}"`);
         } else {
-          if (currentList.length > 0) {
-            clipboardData.push(currentList.join("\n"));
-            currentList = [];
-            currentLevel = -1;
-          }
-          clipboardData.push(text);
+          // For non-list paragraphs, keep the text as a simple entry
+          clipboardData.push(`"paragraph": "${text}"`);
         }
       }
 
-      if (currentList.length > 0) {
-        clipboardData.push(currentList.join("\n"));
-      }
-
-      const clipboardString = clipboardData.join("\n");
+      const clipboardString = `{\n${clipboardData.join(",\n")}\n}`;
       copyToClipboard(clipboardString);
 
       console.log("All data copied to clipboard:");
