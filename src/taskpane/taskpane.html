@@ -6,10 +6,18 @@
   <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
   <script src="taskpane.js"></script>
   <link rel="stylesheet" href="taskpane.css">
+  <style>
+    #copyMessage {
+      display: none;
+      color: green;
+      margin-bottom: 10px;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
-    <button id="logStyleContentButton">Testing Button</button>
+    <div id="copyMessage">Text has been copied successfully!</div>
+    <button id="logStyleContentButton">Copy Selected Text</button>
   </div>
 </body>
 </html>
