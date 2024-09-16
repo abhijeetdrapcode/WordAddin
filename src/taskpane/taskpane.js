@@ -7,19 +7,15 @@ Office.onReady((info) => {
 async function getListInfoFromSelection() {
   try {
     await Word.run(async (context) => {
-      console.log("Getting list info and styles from selection");
-
       const selection = context.document.getSelection();
       const selectionRange = selection.getRange();
       const paragraphs = selectionRange.paragraphs;
       paragraphs.load("items");
       await context.sync();
 
-      console.log(`Total paragraphs in the selection: ${paragraphs.items.length}`);
-
       let clipboardData = [];
       let parentNumbering = [];
-      let paragraphCounter = 1; // Counter for non-list paragraphs
+      let paragraphCounter = 1;
 
       for (let i = 0; i < paragraphs.items.length; i++) {
         const paragraph = paragraphs.items[i];
@@ -29,8 +25,17 @@ async function getListInfoFromSelection() {
         let text = paragraph.text.trim();
         const isListItem = paragraph.isListItem;
 
-        // Remove special non-printable/control characters from text
+        // Remove non-printable characters
         text = text.replace(/[^\x20-\x7E]/g, "");
+
+        // Remove a leading dot if present
+        if (text.startsWith(".")) {
+          text = text.substring(1).trim();
+        }
+
+        if (text.length <= 1) {
+          continue;
+        }
 
         if (isListItem) {
           paragraph.listItem.load("level,listString");
@@ -39,7 +44,6 @@ async function getListInfoFromSelection() {
           const level = paragraph.listItem.level;
           const listString = paragraph.listItem.listString || "";
 
-          // Update parentNumbering for the current level
           if (level <= parentNumbering.length) {
             parentNumbering = parentNumbering.slice(0, level);
           }
@@ -47,11 +51,10 @@ async function getListInfoFromSelection() {
 
           const fullNumbering = parentNumbering.slice(0, level + 1).join(".");
 
-          // Format as key-value pair
           clipboardData.push(`"${fullNumbering}": "${text}"`);
         } else {
-          // For non-list paragraphs, assign a unique number after "paragraph"
-          clipboardData.push(`"paragraph_${paragraphCounter}": "${text}"`);
+          const parentKey = parentNumbering.length > 0 ? parentNumbering.join(".") : `paragraph_${paragraphCounter}`;
+          clipboardData.push(`"${parentKey}.text": "${text}"`);
           paragraphCounter++;
         }
       }
@@ -87,15 +90,13 @@ function copyToClipboard(text) {
     const msg = successful ? "successful" : "unsuccessful";
     console.log("Copying text was " + msg);
 
-    // Show the copy success message if copy was successful
     if (successful) {
       const copyMessage = document.getElementById("copyMessage");
-      copyMessage.style.display = "block"; // Show the message
+      copyMessage.style.display = "block";
 
-      // Hide the message after 15 seconds
       setTimeout(() => {
         copyMessage.style.display = "none";
-      }, 15000); // 15 seconds
+      }, 15000);
     }
   } catch (err) {
     console.error("Unable to copy to clipboard", err);
